@@ -1,0 +1,158 @@
+#%RAML 1.0
+baseUri: https://anypoint.mulesoft.com/mocking/api/v1/links/340e5119-56dd-4456-9664-11c8b1f9ef1b/ # 
+title: order_mgmt_eapi
+types:
+  Order: !include dataType/orderDataType.raml
+  Customer: !include dataType/customerDataType.raml
+  Product: !include dataType/productDataType.raml
+  OutstandingPayment: !include dataType/outstandingPaymentDataType.raml
+/ordersTo:
+  get:
+    displayName: get all orders sortedBy date and status is shipped
+    queryParameters:
+      city:
+        displayName: City name
+        required: true
+        type: string
+    responses:
+      200:
+        body:
+          application/json:
+            type: Order[]
+            examples:
+              output: !include examples/orderExample.raml
+/customersTo:
+  get:
+    displayName: get all customers for a city
+    queryParameters:
+      city:
+        displayName: City name
+        required: true
+        type: string
+    responses:
+      200:
+        body:
+          application/json:
+            type: Customer[]
+            examples:
+              output: !include examples/customerExample.raml
+/ordersOpen:
+  /{customerID}:
+    get:
+      displayName: get all open orders for a customer
+      responses:
+        200:
+          body:
+            application/json:
+              type: Order[]
+              examples:
+                output: !include examples/orderExample.raml
+    uriParameters:
+      customerID:
+        displayName: Customer ID
+        type: string
+        required: true
+/ordersFor:
+  /{orderID}:
+    get:
+      displayName: get all products for particular order
+      responses:
+        200:
+          body:
+            application/json:
+              type: Product[]
+              examples: !include examples/productExample.raml
+    uriParameters:
+      orderID:
+        displayName: Order ID
+        type: string
+        required: true
+/orderFor:
+  /{customerID}:
+    get:
+      displayName: get all orders for an customer
+      responses:
+        200:
+          body:
+            application/json:
+              type: Order[]
+              examples:
+                output: !include examples/orderExample.raml
+    uriParameters:
+      customerID:
+        displayName: Customer ID
+        type: string
+        required: true
+/orderValueGreater:
+  get:
+    displayName: get all order where order value is greater than (x) amount
+    queryParameters:
+      amount:
+        displayName: Amount
+        required: true
+        type: string
+    responses:
+        200:
+          body:
+            application/json:
+              type: Order[]
+              examples:
+                output: !include examples/orderExample.raml
+/productByVendor:
+  get:
+    displayName: get all products sold by particular vendor
+    queryParameters:
+      vendor:
+        displayName: Vendor name
+        required: true
+        type: string
+    responses:
+        200:
+          body:
+            application/json:
+              type: Product[]
+              examples:
+                output: !include examples/productExample.raml
+/productFor:
+  /{orderID}:
+    get:
+      displayName: product details for order
+      responses:
+        200:
+          body:
+            application/json:
+              type: Product[]
+              examples:
+                output: !include examples/productExample.raml
+    uriParameters:
+      orderID:
+        displayName: Order ID
+        type: string
+        required: true
+/outstandingPayment:
+  get:
+    displayName: outstanding payment per customer
+    responses:
+        200:
+          body:
+            application/json:
+              type: OutstandingPayment[]
+              examples:
+                output: !include examples/outstandingPaymentExample.raml
+/heighestSaleProduct:
+  get:
+    displayName: highest selling product
+    queryParameters:
+      month:
+        displayName: Month
+        description: Month format mm for example(01,02,12)
+        required: true
+        type: string
+    responses:
+        200:
+          body:
+            application/json:
+              type: Product[]
+              examples:
+                output: !include examples/productExample.raml
+

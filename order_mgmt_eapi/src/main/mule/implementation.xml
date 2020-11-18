@@ -1,0 +1,496 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd">
+	<json-logger:config name="JSON_Logger_Config" doc:name="JSON Logger Config" doc:id="a65db170-f1fe-4ba1-9419-fc59957a737f" environment="${mule.env}" />
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="49790791-812e-4ebb-9dc2-9b6231b167e6" basePath="/${system.api.basepath}" >
+		<http:request-connection host="${system.api.host}" />
+	</http:request-config>
+	<http:request-config name="HTTP_Request_configuration1" doc:name="HTTP Request configuration" doc:id="453ca131-9a28-4d01-9db8-8e42fbc40a52" basePath="/${process.api.basepath}" >
+		<http:request-connection host="${process.api.host}" />
+	</http:request-config>
+	<flow name="get_all_orders_sortedBy_date_and_status_is_shipped" doc:id="d0c5790b-07cd-4e8e-84ca-58b93ae8db67" >
+		<set-variable value="#[attributes.queryParams.city]" doc:name="city" doc:id="95ac69d3-388f-4aec-8e51-ce5cdb1d13fc" variableName="city"/>
+		<json-logger:logger doc:name="Logger" doc:id="db8283b8-84e5-4865-9eff-3fecea7a7f44" message="Before calling get all customers system api" tracePoint="BEFORE_REQUEST" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<http:request method="GET" doc:name="get All Customer" doc:id="c9788130-81cf-46e5-8445-181ac9f2d408" target="targetCustomer" responseTimeout="60000" config-ref="HTTP_Request_configuration" path="/customers"/>
+		<json-logger:logger doc:name="Logger" doc:id="48015a9e-eda3-46c4-82e2-5bbd8223ed7b" message="After get all customers system api and Before calling get all orders system api" tracePoint="AFTER_REQUEST" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<http:request method="GET" doc:name="get All Orders" doc:id="3f2080ee-ed84-4211-b993-7605266132e8" responseTimeout="60000" config-ref="HTTP_Request_configuration" path="/orders"/>
+		<json-logger:logger doc:name="Logger" doc:id="29052968-d49b-4221-8f69-ce4b1506b1ff" message="After get all orders system api" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{ 
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<ee:transform doc:name="Transform Message" doc:id="70bb15be-c72d-4fdf-b2ad-c38daaa760d9" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var customer = vars.targetCustomer filter(item,index) -> (item.city == vars.city)
+var customerArr = customer map(value,index)->(value.customerNumber)
+var orders = payload.orders filter(order,index)->((customerArr contains order.customerNumber) and order.status == "Shipped")
+---
+orders orderBy $.orderDate]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<json-logger:logger doc:name="Logger" doc:id="8be87593-3b4a-4f8a-8bed-fc5b57dbd6f3" message="After getting successfull response" tracePoint="END" config-ref="JSON_Logger_Config"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="0ab1928b-6568-4623-bcd8-f933b2c5de9b" type="HTTP:BAD_REQUEST, HTTP:CONNECTIVITY, HTTP:METHOD_NOT_ALLOWED, HTTP:TIMEOUT" >
+				<json-logger:logger doc:name="Logger" doc:id="ee5701dc-6d9d-49ce-b4c7-6c914ddbd66f" message="#[errors.description]" config-ref="JSON_Logger_Config"/>
+			</on-error-propagate>
+		</error-handler>
+	
+</flow>
+	<flow name="get_all_customers_for_a_city" doc:id="ec5434af-5644-487d-aca7-d96f12fa9de5" >
+		<set-variable value="#[attributes.queryParams.city]" doc:name="city" doc:id="583d6d84-69ee-48af-b506-7af7c9c6890e" variableName="city"/>
+		<json-logger:logger doc:name="Logger" doc:id="d3e6fceb-01de-4e04-a48a-254743fe2aac" message="Before calling get all customers system api" tracePoint="BEFORE_REQUEST" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<http:request method="GET" doc:name="get All Customers" doc:id="a308eae7-5eb0-4618-bc6d-bb88e56ce797" responseTimeout="60000" config-ref="HTTP_Request_configuration" path="/customers"/>
+		<ee:transform doc:name="Transform Message" doc:id="08b187cd-4ef5-46ca-8b1d-eeed337cc067" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload filter(item,index) -> (item.city == vars.city)]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<json-logger:logger doc:name="Logger" doc:id="4367daff-f435-4346-a51b-0742d5f7628a" message="After getting successfull response" tracePoint="END" config-ref="JSON_Logger_Config"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="42049a27-93c7-4568-a545-cef2c94a4144" type="HTTP:BAD_REQUEST, HTTP:CONNECTIVITY, HTTP:METHOD_NOT_ALLOWED, HTTP:TIMEOUT" >
+				<json-logger:logger doc:name="Logger" doc:id="26308018-d76a-42bf-9cb3-b3cdff8208b4" message="#[error.description]" config-ref="JSON_Logger_Config"/>
+			</on-error-propagate>
+		</error-handler>
+	
+</flow>
+	<flow name="get_all_open_orders_for_customers" doc:id="748c1cb9-7319-4eb1-89b4-47bea8f01b8c" >
+		<set-variable value="#[attributes.uriParams.customerID]" doc:name="customerID" doc:id="75c2bc28-7b83-497c-903b-b281b141e5d1" variableName="customerID"/>
+		<json-logger:logger doc:name="Logger" doc:id="2eb523c3-6796-4d5a-a327-82477cb78797" message="Before calling get customer order process api" tracePoint="BEFORE_REQUEST" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<http:request method="GET" doc:name="get customer orders" doc:id="4b59138d-ef68-452e-8b8e-c97d6f991a62" responseTimeout="60000" config-ref="HTTP_Request_configuration1" path="/orderForCustomer/{customerID}">
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"customerID" : vars.customerID
+}]]]></http:uri-params>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="9650e79b-15ea-48cc-b864-80dd317e95fe" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload filter(item,index) -> ((item.shippedDate == null) and item.status == "In Process")]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<json-logger:logger doc:name="Logger" doc:id="c848b727-35cb-4cae-b061-2d4fe161be88" message="After getting successfull response" tracePoint="END" config-ref="JSON_Logger_Config"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="9b658a7f-4c9b-4f70-abec-a0072b8a2638" type="HTTP:BAD_REQUEST, HTTP:CONNECTIVITY, HTTP:METHOD_NOT_ALLOWED, HTTP:TIMEOUT" >
+				<json-logger:logger doc:name="Logger" doc:id="5f19dcab-0668-4dab-b69a-784468625e15" message="#[error.description]" config-ref="JSON_Logger_Config"/>
+			</on-error-propagate>
+		</error-handler>
+	
+</flow>
+	<flow name="get_all_products_for_particular_order" doc:id="78ab4f7d-a0aa-41bc-94dd-6820abff9c5a" >
+		<set-variable value="#[attributes.uriParams.orderID]" doc:name="orderID" doc:id="5e13e799-8da4-441c-ae8a-ebfba670675c" variableName="orderID"/>
+		<json-logger:logger doc:name="Logger" doc:id="518e1b86-2a24-4481-b5fc-dc37a34c5c20" tracePoint="BEFORE_REQUEST" message="before calling get particular order system api" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{ 
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<http:request method="GET" doc:name="get particular order" doc:id="bcd6f2e7-474c-4787-8f7d-5d659243837c" target="targetOrder" config-ref="HTTP_Request_configuration" path="/order/{orderID}">
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"orderID" : vars.orderID
+}]]]></http:uri-params>
+		</http:request>
+		<json-logger:logger doc:name="Logger" doc:id="72e0c002-6f06-4636-a297-af67e558d436" tracePoint="AFTER_REQUEST" message="After get particular order system api and before calling get all product" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{ 
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<http:request method="GET" doc:name="get All Product" doc:id="a0caf145-597d-40d4-9038-1412a9253f87" config-ref="HTTP_Request_configuration" path="/products"/>
+		<json-logger:logger doc:name="Logger" doc:id="e90402f2-951d-4a27-b187-095e5c3f34e6" tracePoint="AFTER_REQUEST" message="After get all products system api" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<ee:transform doc:name="Transform Message" doc:id="715f863d-d2f0-44f6-a66c-8daff04ae38a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var productArr = vars.targetOrder.order.orderDetails map(value,index)->(value.productCode)
+---
+payload filter(product,index)->(productArr contains product.productCode)]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<json-logger:logger doc:name="Logger" doc:id="4d9b949d-8108-4f3d-b791-30405e0b626c" tracePoint="END" message="After getting successfull response" config-ref="JSON_Logger_Config"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="75b38b10-b2d8-40d7-a800-857db02e8b15" type="HTTP:BAD_REQUEST, HTTP:CONNECTIVITY, HTTP:METHOD_NOT_ALLOWED, HTTP:TIMEOUT" >
+				<json-logger:logger doc:name="Logger" doc:id="7c1a97b6-0e1a-4e2d-ab99-88d81ebe852d" message="#[error.description]" config-ref="JSON_Logger_Config"/>
+			</on-error-propagate>
+		</error-handler>
+	
+</flow>
+	<flow name="get_all_orders_for_an_customer" doc:id="ef491837-efef-494e-baaf-e87948f972c7" >
+		<set-variable value="#[attributes.uriParams.customerID]" doc:name="customerID" doc:id="88eebfb6-7142-4508-8954-a7226572eca0" variableName="customerID"/>
+		<json-logger:logger doc:name="Logger" doc:id="94cacfe3-7a6f-40f0-ae8d-7cb5e1024787" tracePoint="BEFORE_REQUEST" message="before calling get particular customer order process api" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<http:request method="GET" doc:name="get particular customer orders" doc:id="bf9253bd-8e50-41bb-b17a-10cabe2a71a6" responseTimeout="60000" config-ref="HTTP_Request_configuration1" path="/orderForCustomer/{customerID}">
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"customerID" : vars.customerID
+}]]]></http:uri-params>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="f26dc550-0b26-4e36-af50-87054bb27c3c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload filter(item,index) -> ((item.shippedDate == null) and item.status == "In Process")]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<json-logger:logger doc:name="Logger" doc:id="361e6af6-f651-4c90-a810-24649d91865c" tracePoint="END" message="after getting successfull response" config-ref="JSON_Logger_Config"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="788b7c4e-4b25-48d7-ae84-77bacec9e064" type="HTTP:BAD_REQUEST, HTTP:CONNECTIVITY, HTTP:METHOD_NOT_ALLOWED, HTTP:TIMEOUT" >
+				<json-logger:logger doc:name="Logger" doc:id="34daf9f9-d522-4274-860f-8e5ee0009245" message="#[error.description]" config-ref="JSON_Logger_Config"/>
+			</on-error-propagate>
+		</error-handler>
+	
+</flow>
+	<flow name="get_all_order_where_order_value_is_greater_than_(x)_amount" doc:id="33e48e4c-e1f2-4da8-b920-62cc65b2ac4d" >
+		<set-variable value="#[attributes.queryParams.amount as Number]" doc:name="amount" doc:id="e5972c20-b5fa-4495-8a42-a4ff36bb7379" variableName="amount"/>
+		<json-logger:logger doc:name="Logger" doc:id="55f75dde-ed0f-40df-8725-b216885f3e83" message="before calling get all orders system api" tracePoint="BEFORE_REQUEST" config-ref="JSON_Logger_Config">
+			<json-logger:content><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<http:request method="GET" doc:name="get All Orders" doc:id="fe2c40b8-5789-4129-bb1d-a6371db1b011" responseTimeout="60000" config-ref="HTTP_Request_configuration" path="/orders">
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="ebd80706-5ed7-464e-8dd9-2f6c125a9dda" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var orders = payload.orders
+var totalPrice = (orderDetails) -> orderDetails reduce((val,acc = 0) -> acc + (val.quantityOrdered * val.priceEach))
+---
+orders filter(item,index)->(totalPrice(item.orderDetails) > vars.amount)
+//orders[0].orderDetails reduce((val,acc = 0) -> acc + (val.quantityOrdered * val.priceEach))]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<json-logger:logger doc:name="Logger" doc:id="b0b91f0a-a7d1-4a44-9804-eefe68652252" message="after getting successfull response" tracePoint="END" config-ref="JSON_Logger_Config"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="ff3b8662-bf60-495d-b736-7e182b1de7bf" type="HTTP:BAD_REQUEST, HTTP:CONNECTIVITY, HTTP:METHOD_NOT_ALLOWED, HTTP:TIMEOUT" >
+				<json-logger:logger doc:name="Logger" doc:id="fb4e33ea-6814-4589-aba7-2ad4a2823cf2" message="#[error.description]" config-ref="JSON_Logger_Config"/>
+			</on-error-propagate>
+		</error-handler>
+	
+</flow>
+	<flow name="get_all_products_sold_by_particular_vendor" doc:id="89f06307-3cdd-4d3a-9fd1-8e151a7863b1" >
+		<set-variable value="#[attributes.queryParams.vendor]" doc:name="vendor" doc:id="e2a4b6e6-3757-42b8-a71c-c5ee59f9cd11" variableName="vendor"/>
+		<json-logger:logger doc:name="Logger" doc:id="c75f1e95-9003-42d2-880a-015db454ad8c" message="before calling get all products system api" tracePoint="BEFORE_REQUEST" config-ref="JSON_Logger_Config">
+			<json-logger:content><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<http:request method="GET" doc:name="get All Products" doc:id="e3f32dff-e57d-4254-bb17-a1cd73b6a315" target="targetProduct" config-ref="HTTP_Request_configuration" path="/products"/>
+		<ee:transform doc:name="Transform Message" doc:id="96e73272-88b0-4e1d-b4a8-83d60ae62874" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var product = vars.targetProduct filter(item,index) -> (item.productVendor == vars.vendor)
+---
+product]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+			</ee:variables>
+		</ee:transform>
+		<json-logger:logger doc:name="Logger" doc:id="ec81f78f-9de8-4e8d-bf2d-d14642b748db" message="after getting successfull response" tracePoint="END" config-ref="JSON_Logger_Config"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="4cab776a-6b6c-4355-924e-36f1f95b0c2d" type="HTTP:BAD_REQUEST, HTTP:CONNECTIVITY, HTTP:METHOD_NOT_ALLOWED, HTTP:TIMEOUT" >
+				<json-logger:logger doc:name="Logger" doc:id="15474266-f817-48a8-82c2-13b127a6e1f4" message="#[error.description]" config-ref="JSON_Logger_Config"/>
+			</on-error-propagate>
+		</error-handler>
+	
+</flow>
+	<flow name="product_details_for_order" doc:id="0673138d-a5e4-4d8d-a8a8-8279858b45b2" >
+		<set-variable value="#[attributes.uriParams.orderID]" doc:name="orderID" doc:id="48e2f480-6d95-4cfa-80c0-a6ae5505b6ad" variableName="orderID"/>
+		<json-logger:logger doc:name="Logger" doc:id="ac58687a-4535-45e0-821c-23ccceecc99b" message="before calling get particular order system api" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<http:request method="GET" doc:name="get Particular Order" doc:id="8fbdcd87-e902-4761-bb22-d9715b975c96" target="targetOrder" responseTimeout="60000" config-ref="HTTP_Request_configuration" path="/order/{orderID}">
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"orderID" : vars.orderID
+}]]]></http:uri-params>
+		</http:request>
+		<json-logger:logger doc:name="Logger" doc:id="0a417e67-74fb-44f8-be93-1766fe0196de" message="after get particular order system api" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<ee:transform doc:name="get productCode" doc:id="468e7e7c-effd-4a30-a328-7cc8757a0a2e">
+			<ee:message>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="productCode" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.targetOrder.order.orderDetails map((item,index) -> (item.productCode))]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="myVar" doc:id="575841cf-fbd1-4c75-974a-0c6405d5257e" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="myVar" ><![CDATA[%dw 2.0
+output application/json
+---
+[]]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<json-logger:logger doc:name="Logger" doc:id="9ec293a2-cd3a-47bf-91e1-d070a388f296" message="before calling get particular product and before foreach scope" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<foreach doc:name="For Each" doc:id="91cbd7ae-4ace-4570-b471-246852fe77fb" collection="#[vars.productCode]">
+			<set-variable value="#[payload]" doc:name="productID" doc:id="6d2938bd-e09b-4445-b555-26dced4a50ce" variableName="productID"/>
+			<http:request method="GET" doc:name="get Particular Product" doc:id="f8855bb9-2bda-4810-b370-43e4797b57ff" target="targetProduct" config-ref="HTTP_Request_configuration" path="/product/{productID}">
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"productID" : vars.productID
+}]]]></http:uri-params>
+				<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"productID" : vars.productID
+}]]]></http:query-params>
+			</http:request>
+			<ee:transform doc:name="Transform Message" doc:id="0e1ad488-59d6-4db1-aaee-fd7f58d5ca0f" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="myVar" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.myVar + vars.targetProduct[0]
+]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</foreach>
+		<json-logger:logger doc:name="Logger" doc:id="83a51f24-bd91-4980-9b2b-3130c3288201" message="after get particular product system api and after foreach scope" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<ee:transform doc:name="Transform Message" doc:id="4d13b89e-629b-48cf-a7ec-4408e1b37bd4" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.myVar]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<json-logger:logger doc:name="Logger" doc:id="89f44075-8bd8-4227-9bbd-7dc3d1110cbc" message="after getting successfull response" config-ref="JSON_Logger_Config"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="c08b6406-f942-4261-a8e6-48f7c1e450b1" type="HTTP:BAD_REQUEST, HTTP:CONNECTIVITY, HTTP:METHOD_NOT_ALLOWED, HTTP:TIMEOUT" >
+				<json-logger:logger doc:name="Logger" doc:id="fe098d23-4be6-4fe7-bce8-5b87bf2432ff" message="#[error.description]" config-ref="JSON_Logger_Config"/>
+			</on-error-propagate>
+		</error-handler>
+	
+</flow>
+	<flow name="outstanding_payment_per_customer" doc:id="5be5735a-5564-4be9-813d-af773f4c042a" >
+		<json-logger:logger doc:name="Logger" doc:id="57d7102c-7766-4bf5-8831-1b642593135b" message="before calling get all order system api" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<http:request method="GET" doc:name="get All Order" doc:id="3cd41971-4133-4210-bec8-cb1c8c29f9ca" responseTimeout="60000" config-ref="HTTP_Request_configuration" path="/orders"/>
+		<json-logger:logger doc:name="Logger" doc:id="b95df69a-34c1-441c-9ab4-d625af223681" message="after get all order system api" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<ee:transform doc:name="Transform Message" doc:id="54df1cec-f122-4f5e-b96c-d2c6647342b6">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="totalValue"><![CDATA[%dw 2.0
+output application/json
+var data = payload.orders filter $.status != "In Process" and $.status != "Cancelled"
+---
+data map(value,index)->{
+	customerNumber: value.customerNumber,
+	totalValue: value.orderDetails reduce(val,acc = 0) -> acc + (val.quantityOrdered * val.priceEach)
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<json-logger:logger doc:name="Logger" doc:id="dd322c5a-b0f7-409d-94d9-221812806f90" message="before calling get all payments system api" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<http:request method="GET" doc:name="get All Payments" doc:id="94afcb56-e112-4488-80ca-13bbb2b43ae1" path="/payments" config-ref="HTTP_Request_configuration"/>
+		<json-logger:logger doc:name="Logger" doc:id="c1fbd296-21d4-41e3-b44e-f30796d7ffbb" message="after get all payments system api" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<ee:transform doc:name="Transform Message" doc:id="55901aad-d511-4e8c-b9c2-6d235899b72f">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var data="payments": (payload groupBy $.customerNumber mapObject(ogrp, ogrp_key) ->("customerPaymentDetails": {
+	customerNumber: ogrp_key as Number,
+	"totalPaidAmount": ogrp.amount reduce(val,acc = 0) -> acc + val
+})).*customerPaymentDetails
+---
+data.payments orderBy $.customerNumber]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="34cbd39f-e476-4a63-878f-7e9633ec1d07" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+import * from dw::core::Objects
+var customerarr = vars.totalValue
+var customers = {
+	"Customers": (customerarr groupBy $.customerNumber mapObject(ogrp, ogrp_key) ->("customer": {
+		"customerNumber": ogrp_key,
+		"totalvalue": ogrp.totalValue reduce(val,acc=0) -> acc + val
+	})).*customer
+}
+var cust = customers.Customers orderBy $.customerNumber
+var all = payload map (payload[$$] mergeWith cust[$$])
+---
+all map(value,index)->({
+	"customerNumber": value.customerNumber,
+	"OutstandinPayment": value.totalvalue - value.totalPaidAmount
+}) ]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<json-logger:logger doc:name="Logger" doc:id="34706b6b-efdc-406d-90b4-b4257fb9ae44" message="after getting successfull response" config-ref="JSON_Logger_Config"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="e5e88b84-31d4-47cb-84d1-90baa416e71f" type="HTTP:BAD_REQUEST, HTTP:CONNECTIVITY, HTTP:METHOD_NOT_ALLOWED, HTTP:TIMEOUT" >
+				<json-logger:logger doc:name="Logger" doc:id="c8862740-1a1a-47c0-b74f-5c7fa32376c4" message="#[error.description]" config-ref="JSON_Logger_Config"/>
+			</on-error-propagate>
+		</error-handler>
+	
+</flow>
+	<flow name="heighest_salling_product" doc:id="26c89d76-5f2a-49fd-a05e-eaf3f301a955" >
+		<set-variable value="#[attributes.queryParams.month]" doc:name="month" doc:id="ba734a6e-bf6f-40bb-bdaa-16af6207991a" variableName="month"/>
+		<json-logger:logger doc:name="Logger" doc:id="1c14115e-550a-432c-a916-d54e8fa53e00" message="before calling get all order system api" config-ref="JSON_Logger_Config">
+			<json-logger:content><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<http:request method="GET" doc:name="get All Order" doc:id="b6963717-7648-4883-9085-3c11d2169188" responseTimeout="60000" config-ref="HTTP_Request_configuration" path="/orders"/>
+		<json-logger:logger doc:name="Logger" doc:id="595dc5ec-291c-4230-9bcf-35a9a70171d0" message="after get all order system api" config-ref="JSON_Logger_Config">
+			<json-logger:content><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<ee:transform doc:name="heighest selling productCode" doc:id="d925b906-cf50-4e8c-ad79-8af76abf8096" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var orders = payload.orders filter(item,index) -> (item.orderDate.month == vars.month as Number)
+var myObj = flatten(orders.orderDetails) groupBy(item,index) -> (item.productCode)
+var newData2 = myObj mapObject(value,key,index)->({
+	(key):sum(value.quantityOrdered)
+})
+var newData3 =  newData2 pluck(value2,key2,index2) -> ({ 
+	"productCode" : (key2),
+	"quantityOrdered":value2
+})
+var newData4 = newData3 orderBy -$.quantityOrdered
+var firstObj = newData4[0]
+var newData5 = newData4 filter(item,index) -> (item.quantityOrdered == firstObj.quantityOrdered)
+---
+//newData3 maxBy ((item) -> item.quantityOrdered)
+//newData3 orderBy -$.quantityOrdered
+//firstObj
+ newData5 map(item,index)->(item.productCode)]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="accumulator" doc:id="ebce9eba-df16-4e2f-be0f-ee5e895ec5f6" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="accumulator" ><![CDATA[%dw 2.0
+output application/json
+---
+[]]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<json-logger:logger doc:name="Logger" doc:id="ec464200-4b2d-464f-a59a-27bda60ecff8" message="before calling get particular product and before foreach scope" config-ref="JSON_Logger_Config">
+			<json-logger:content><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<foreach doc:name="For Each" doc:id="4107c5b8-c13e-4bc1-a09c-b42ff8d17c4c" collection="#[payload]">
+			<http:request method="GET" doc:name="get Particular Product" doc:id="1bc86d8e-b58b-4d0d-9d0d-9621a66b5fe8" target="targetProduct" config-ref="HTTP_Request_configuration1" path="/product/{productID}">
+				<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"productID" : payload
+}]]]></http:uri-params>
+			</http:request>
+			<ee:transform doc:name="add product in accumulator" doc:id="3577b942-415c-4ee2-93e3-de01a42c565a" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="accumulator" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.accumulator + vars.targetProduct[0]]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</foreach>
+		<json-logger:logger doc:name="Logger" doc:id="6ec17d58-afde-4485-a7de-1bf3a6a96491" message="after get particular product system api and after foreach scope" config-ref="JSON_Logger_Config">
+			<json-logger:content><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<ee:transform doc:name="heighest selling products" doc:id="42b6bae7-931b-4567-a7c5-d0cb8b0019c1" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.accumulator]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<json-logger:logger doc:name="Logger" doc:id="0bcabee7-2c37-40b1-847e-0685d971fb7a" message="after getting successfull response" tracePoint="END" config-ref="JSON_Logger_Config"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="1f36fd76-27cc-4635-9dd9-c3a7fb53e7ed" type="HTTP:BAD_REQUEST, HTTP:CONNECTIVITY, HTTP:METHOD_NOT_ALLOWED, HTTP:TIMEOUT" >
+				<json-logger:logger doc:name="Logger" doc:id="9e9a564a-aab2-4148-99c8-e6584b84f49a" message="#[error.description]" config-ref="JSON_Logger_Config"/>
+			</on-error-propagate>
+		</error-handler>
+	
+</flow>
+</mule>

@@ -1,0 +1,11 @@
+host:
+  port: "8081"
+
+db:
+  host: "remotemysql.com"
+  port: "3306"
+  database: "CYk3TcFOXf"
+  user: "CYk3TcFOXf"
+  password: "3m8T1DNsdx"
+  table: "customer_mapping_sfdc"
+  

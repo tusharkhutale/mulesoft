@@ -1,0 +1,25 @@
+#%RAML 1.0
+title: Exercise_raml_max_size_param
+types:
+  Student: !include types.raml
+/student:
+  get:
+    queryParameters:
+      name:
+        required: true
+        maxLength: 10
+        minLength: 3
+      
+      mobile:
+        required: true
+        maxLength: 10
+        minLength: 10
+
+    responses:
+      200:
+        body:
+          application/json:
+            type: Student[]
+            examples:
+              output: !include output.raml
+            

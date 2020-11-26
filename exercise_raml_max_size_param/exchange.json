@@ -1,0 +1,11 @@
+{
+  "main" : "exercise_raml_max_size_param.raml",
+  "name" : "Exercise_raml_max_size_param",
+  "classifier" : "raml",
+  "tags" : [ ],
+  "groupId" : "9a45482e-ead3-44e4-81f9-6c0bf3aa494b",
+  "assetId" : "exercise_raml_max_size_param",
+  "version" : "1.0.0",
+  "apiVersion" : "",
+  "dependencies" : [ ]
+}

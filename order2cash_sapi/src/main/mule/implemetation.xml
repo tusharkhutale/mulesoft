@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="products_get" doc:id="75df811d-6c3c-47fa-a9e4-fbebce138cff" >
+		<db:select doc:name="Select" doc:id="4dfde140-3f8f-40a6-84e1-28ee22ca46c6" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from products]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="ece9e2a0-c3e8-4bf9-9a27-1c53a2d6551c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+if(isEmpty(payload)){
+	out:{
+		status:"products not found"
+	}
+}
+else{
+out:payload map ( payload01 , indexOfPayload01 ) -> {
+	quantity: payload01.quantity,
+	code: payload01.code,
+	price: payload01.price,
+	name: payload01.name,
+	description: payload01.description,
+	index: payload01.index,
+	id: payload01.ProductId
+} distinctBy (value) -> { "unique" : value }
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="5eb4d5c7-c32b-4a77-ac1c-141f080e2d10" message="#[payload]"/>
+	</flow>
+	<flow name="availability_productCode" doc:id="f80720a9-4f3f-491a-833e-1aceffb9d7a3" >
+		<db:select doc:name="Select" doc:id="2c6d3676-a40f-4c78-9015-73b4ff14e32c" config-ref="Database_Config">
+			<db:sql ><![CDATA[select code,quantity from mulesoft.products where code=:ccode]]></db:sql>
+			<db:input-parameters ><![CDATA[#[ccode:attributes.uriParams.productCode as String]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="4d78ad64-b72f-47fc-be5f-25f2158af920" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+if(isEmpty(payload)){
+	out:{
+		status:"Product Not Found"
+	}
+}
+else{
+  out:payload map ((item, index) -> {
+	quantity: item.quantity,
+	code: item.code
+})
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="69815272-55c0-4029-9d35-7dbc52f2dee2" message="#[payload.out]"/>
+	</flow>
+	<flow name="products_id" doc:id="1da33b33-9514-4a30-80aa-34f20a5d4974" >
+		<db:select doc:name="Select" doc:id="95bbb3d6-6965-4504-8773-be2d0a52fab8" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from products]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="f021f67f-4383-4c64-8dba-d1839c36dbe1" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+if(isEmpty(payload)){
+	out: {
+		status:"Product not found"
+	}
+}
+else{
+out:payload filter ((value, index) -> (value.ProductId == attributes.uriParams.id))
+map(items)->{
+  id: items.ProductId,
+  name: items.name,
+  description: items.description,
+  index: items.index,
+  code: items.code,
+  quantity: items.quantity
+}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="37df436d-dc8e-474d-a41a-c833f289765c" message="#[payload.out]"/>
+	</flow>
+</mule>
